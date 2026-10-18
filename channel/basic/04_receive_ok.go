@@ -2,6 +2,13 @@
 
 // v, ok := <-ch in four states. ok == false only when the channel is closed and drained.
 //
+//	   state             | v          | ok    | blocks?
+//	---------------------+------------+-------+-----------------
+//	1. open, has data    | the value  | true  | no
+//	2. closed, has data  | the value  | true  | no
+//	3. closed, drained   | zero value | false | no
+//	4. open, empty       | -          | -     | yes, until a send
+//
 // Run: go run ./channel/basic/04_receive_ok.go
 package main
 
