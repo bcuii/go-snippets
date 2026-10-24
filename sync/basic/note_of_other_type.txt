@@ -1,0 +1,5 @@
+sync.Pool: misleading type name.
+
+sync.Map: use map + Mutex (or RWMutex) unless you know what you're doing.
+
+sync.Cond: just forget about it.
