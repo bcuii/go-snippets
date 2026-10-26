@@ -1,8 +1,7 @@
 //go:build ignore
 
-// Cancelable send: a producer selects on both out <- v and ctx.Done().
-// When the consumer stops reading and cancels, the producer returns instead of blocking on the send forever.
-// Any goroutine that sends to a channel nobody may read anymore needs such a way out.
+// Cancelable send: a sender whose reader may leave selects on both out <- v and ctx.Done().
+// When the reader stops and cancels, the sender returns instead of blocking on the send forever.
 //
 // Run: go run ./select/patterns/02_cancelable_send.go
 package main
@@ -10,32 +9,31 @@ package main
 import (
 	"context"
 	"fmt"
-	"runtime"
 	"time"
 )
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
-	for v := range generate(ctx) {
-		if v == 3 {
-			break // the consumer needs only 0, 1, 2
+	for p := range pages(ctx) {
+		fmt.Println("got page", p)
+		if p == 2 {
+			break // found what we need: stop reading
 		}
-		fmt.Println("got", v)
 	}
-	cancel()
-	time.Sleep(10 * time.Millisecond)                  // give the generator a moment to return
-	fmt.Println("goroutines:", runtime.NumGoroutine()) // 1: only main is left
+	cancel()                           // tell pages to stop
+	time.Sleep(100 * time.Millisecond) // wait to see pages stop
 }
 
-// generate sends 0, 1, 2, ... until ctx is canceled.
-func generate(ctx context.Context) <-chan int {
+// pages fetches pages from an API in the background; there are 100, the reader needs 2.
+func pages(ctx context.Context) <-chan int {
 	out := make(chan int)
 	go func() {
-		defer close(out)
-		for i := 0; ; i++ {
+		defer fmt.Println("pages: stopped")
+		defer close(out) // lets a reader that reads all 100 pages end its range
+		for p := 1; p <= 100; p++ {
 			select {
-			case out <- i:
-			case <-ctx.Done(): // without this case, the goroutine blocks on out <- 4 forever
+			case out <- p:
+			case <-ctx.Done(): // without this case, pages blocks on out <- 3 forever
 				return
 			}
 		}
