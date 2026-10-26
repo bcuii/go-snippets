@@ -1,0 +1,12 @@
+select evaluates every case before choosing one.
+
+On entry, each case's channel expression and each send's value are evaluated once, in source order.
+Then one ready case is picked at random, and only its send or receive runs.
+Side effects of the evaluation happen even for cases that are not picked (Go spec).
+
+
+Gotcha: case <-time.After(d) creates a new timer on every entry,
+so in a for loop the timeout restarts each iteration (golang/go#70821).
+Before Go 1.23, the losing timers also stayed in memory until they fired.
+
+Fix: create the timer before the select; keep cases to plain channels (ch, ctx.Done(), timer.C).
